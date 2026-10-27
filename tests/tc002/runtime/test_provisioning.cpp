@@ -20,19 +20,26 @@ httplib::Request request(const std::string& method, const std::string& path) {
 int main() {
   awtrix::Tc002Provisioning setup(80);
   for (const auto* path : {"/", "/index.html", "/api/v1/device", "/api/v1/system",
-                           "/api/v1/capabilities", "/api/v1/system/wifi-scan"}) {
+                           "/api/v1/capabilities", "/api/v1/system/wifi-scan", "/api/v1/mqtt/tls"}) {
     auto req = request("GET", path);
     httplib::Response res;
     check(setup.admit(req, res), "setup page reads allowed");
   }
   for (const auto* body : {"{\"wifiSsid\":\"Home\",\"wifiPass\":\"password\"}",
-                          "{\"wifiSsid\":\"Cafe\",\"wifiPass\":\"\"}", "{\"hostname\":\"kitchen\"}"}) {
+                          "{\"wifiSsid\":\"Cafe\",\"wifiPass\":\"\"}", "{\"hostname\":\"kitchen\"}",
+                          "{\"mqttEnabled\":true,\"mqttHost\":\"10.0.0.10\",\"mqttPort\":8883,"
+                          "\"mqttTls\":true,\"mqttTlsPin\":\"\",\"mqttPass\":\"x\"}"}) {
     auto req = request("PUT", "/api/v1/system");
     req.body = body;
     httplib::Response res;
-    check(setup.admit(req, res), "setup saves network fields");
+    check(setup.admit(req, res), "setup saves network and MQTT fields");
   }
-  for (const auto* body : {"{\"authEnabled\":false}", "{\"mqttPass\":\"x\"}",
+  for (const auto* method : {"PUT", "DELETE"}) {
+    auto req = request(method, "/api/v1/mqtt/tls/ca");
+    httplib::Response res;
+    check(setup.admit(req, res), "setup manages the broker CA");
+  }
+  for (const auto* body : {"{\"authEnabled\":false}", "{\"haPrefix\":\"x\"}", "{\"mqttPort\":\"1883\"}",
                           "{\"wifiSsid\":\"A\",\"wifiSsid\":\"B\"}", "[]", "{broken", "{}"}) {
     auto req = request("PUT", "/api/v1/system");
     req.body = body;

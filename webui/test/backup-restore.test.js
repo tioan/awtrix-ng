@@ -189,6 +189,60 @@ async function testSetupOffersWifiAndRestore() {
   window.close();
 }
 
+async function testSetupOffersMqtt(tls) {
+  const { window } = await boot({ device: { ipAddress: '0.0.0.0' },
+    caps: { transitions: [], mqttTls: tls || undefined },
+    system: { wifiSsid: 'Home', hostname: 'awtrix', mqttEnabled: false, mqttHost: '', mqttPort: 1883,
+      mqttUser: '', mqttPrefix: '', haDiscovery: true, haPrefix: '', authEnabled: false,
+      ...(tls ? { mqttTls: false, mqttTlsPin: '' } : {}) } });
+  const fetch = window.fetch;
+  let saved;
+  window.fetch = async (url, opts) => {
+    if (url === '/api/v1/system' && opts && opts.method === 'PUT') saved = JSON.parse(opts.body);
+    if (String(url).startsWith('/api/v1/mqtt/tls'))
+      return new window.Response(JSON.stringify({ ca: 'public', pending: null }), { status: 200 });
+    return fetch(url, opts);
+  };
+  await goto(window, '#/system');
+  const doc = window.document;
+  const row = key => [...doc.querySelectorAll('#sec-mqtt .frow')]
+    .find(r => r.querySelector('.key')?.textContent === key);
+  const shown = key => row(key) && row(key).style.display !== 'none';
+  const set = (key, value, events = ['input']) => {
+    const input = row(key).querySelector('input');
+    if (input.type === 'checkbox') input.checked = value; else input.value = value;
+    events.forEach(e => input.dispatchEvent(new window.Event(e, { bubbles: true })));
+  };
+  assert(!!doc.querySelector('#sec-mqtt'), 'setup offers an MQTT section');
+  assert(shown('mqttEnabled') && !shown('mqttHost') && !shown('mqttPass'),
+    'MQTT fields stay folded away until MQTT is on');
+  assert(!row('haPrefix') && !row('authEnabled') && !doc.querySelector('#sec-web'),
+    'setup offers no other broker or web settings');
+  set('mqttEnabled', true);
+  assert(shown('mqttHost') && shown('mqttPort') && shown('mqttUser') && shown('mqttPass') &&
+    shown('mqttPrefix') && shown('haDiscovery'), 'turning MQTT on shows the broker fields');
+  set('mqttHost', '10.0.0.10');
+  set('mqttPass', 'broker-secret');
+  const want = { mqttEnabled: true, mqttHost: '10.0.0.10', mqttPass: 'broker-secret' };
+  if (tls) {
+    assert(!shown('mqttTlsPin'), 'the fingerprint waits for the TLS switch');
+    set('mqttTls', true, ['input', 'change']);
+    assert(shown('mqttTlsPin'), 'TLS shows the fingerprint field');
+    assert(row('mqttPort').querySelector('input').value === '8883', 'TLS moves the stock port to 8883');
+    assert([...doc.querySelectorAll('#sec-mqtt .frow')].some(r => r.textContent.includes('Broker CA')),
+      'setup offers the broker CA upload');
+    set('mqttTlsPin', 'sha256 Fingerprint=' + 'AB:'.repeat(31) + 'AB');
+    Object.assign(want, { mqttPort: 8883, mqttTls: true, mqttTlsPin: 'ab'.repeat(32) });
+  } else {
+    assert(!row('mqttTls') && !row('mqttTlsPin'), 'no TLS fields without MQTT over TLS');
+  }
+  doc.querySelector('#savebar button.pri').click();
+  await flush();
+  const sorted = o => JSON.stringify(Object.fromEntries(Object.entries(o || {}).sort()));
+  assert(sorted(saved) === sorted(want), 'setup saves Wi-Fi and MQTT in one request (got ' + JSON.stringify(saved) + ')');
+  window.close();
+}
+
 // ---- live backend: full round-trip -----------------------------------------
 async function postArchive(bytes) {
   const fd = new FormData();
@@ -267,6 +321,8 @@ async function main() {
   await testZipStructure();
   await testSelectAllCategories();
   await testSetupOffersWifiAndRestore();
+  await testSetupOffersMqtt(false);
+  await testSetupOffersMqtt(true);
   if(!LIVE){
     const{window,store}=await boot();
     store.files['/ICONS'].set('mail.gif',12);

@@ -149,6 +149,15 @@ function brokerTrustRows(page){
   page.panel.querySelector('#sec-mqtt .rows')?.append(mRow,cRow);
   paint({});
   poller(load,5000);
+  return{mRow,cRow};
+}
+// Moves a stock port along with the TLS switch; a port of its own stays.
+function tlsPortFollow(page,f){
+  const tl=f.mqttTls,mp=f.mqttPort;
+  if(tl&&mp)tl.row.querySelector('input').addEventListener('change',()=>{
+    const p=Number(mp.get());
+    if(p===1883||p===8883){mp.fill(tl.get()?8883:1883);page.update();}
+  });
 }
 function iphoneSection(page){
   const state=el('div',{class:'badge'});

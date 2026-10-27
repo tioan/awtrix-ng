@@ -104,11 +104,46 @@ function provisioningPage(view,data){
   const mac=S.stats?.macAddress;
   const lead=mac?[actionRow(t('mac'),t('macH'),[el('b',null,mac)])]:[];
   renderSettingsInto(page,data,fields,[['wifi','grpWifi','grpWifiH',lead]]);
+  setupMqttSection(page,data);
   page.section('maint',t('maint'),t('apmaintH'),
     [actionRow(t('reboot'),null,[armable(el('button',null,t('reboot')),()=>doReboot())])]);
   page.section('backup',t('bkSectionAp'),t('bkRestoreH'),[el('div',{class:'banner blue captive-hint'},
     el('span',null,t('bkCaptiveHint')),el('a',{href:location.origin+'/'},location.host)),...restoreRows(null)]);
 }
+// The broker in the same pass as Wi-Fi, so a new clock needs no second visit at its new address.
+// Every field but the switch stays folded away until MQTT is turned on.
+function setupMqttSection(page,data){
+  const keys=['mqttEnabled','mqttHost','mqttPort','mqttUser','mqttPass','mqttPrefix','haDiscovery'];
+  //linux:begin
+  if(S.mqttTls){
+    keys.splice(3,0,'mqttTls','mqttTlsPin');
+    if(!('mqttTlsPin'in data))data.mqttTlsPin='';
+  }
+  //linux:end
+  const meta=Object.fromEntries(keys.map(k=>[k,k==='mqttEnabled'?SYSF[k]:
+    {...(SETUP_MQTTF[k]||SYSF[k]),g:'mqtt',showIf:k==='mqttTlsPin'?'mqttTls':'mqttEnabled'}]));
+  const f=renderSettingsInto(page,data,meta,[['mqtt','grpMqtt','apMqttH']]);
+  if(f.mqttPrefix&&S.sysUid)f.mqttPrefix.row.querySelector('input').placeholder=S.sysUid;
+  //linux:begin
+  if(f.mqttTls){
+    tlsPortFollow(page,f);
+    const{cRow}=brokerTrustRows(page);
+    page.onUpdate.push(()=>{
+      const on=!!(f.mqttEnabled.get()&&f.mqttTls.get());
+      f.mqttTlsPin.row.style.display=cRow.style.display=on?'':'none';
+    });
+    page.update();
+  }
+  //linux:end
+}
+// A pin as `openssl x509 -noout -fingerprint -sha256` prints it, reduced to the lowercase hex
+// the firmware stores.
+const pinHex=v=>String(v).replace(/^[^=]*=/,'').replace(/[\s:]/g,'').toLowerCase();
+const SETUP_MQTTF={
+  mqttTlsPin:F('mqtt','text','Broker fingerprint',
+    'SHA-256 of the broker certificate, as openssl prints it. Empty = public CAs or the broker CA.',
+    {derive:v=>({mqttTlsPin:pinHex(v)})}),
+};
 function systemPage(view,data){
   if(TZRULE.get(data.tzName)!==data.tz)
     data.tzName=TZFIRST.get(data.tz)||'UTC';
@@ -139,11 +174,7 @@ function systemPage(view,data){
   if(S.voice)voiceSection(page);
   if(S.iphone)iphoneSection(page);
   if(S.mqttTls&&sysFields.mqttTls){
-    const tl=sysFields.mqttTls,mp=sysFields.mqttPort;
-    if(tl&&mp)tl.row.querySelector('input').addEventListener('change',()=>{
-      const p=Number(mp.get());
-      if(p===1883||p===8883){mp.fill(tl.get()?8883:1883);page.update();}
-    });
+    tlsPortFollow(page,sysFields);
     brokerTrustRows(page);
   }
   //linux:end

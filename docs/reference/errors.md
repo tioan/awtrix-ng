@@ -355,19 +355,22 @@ While AWTRIX is in **setup mode**, these are the only available routes:
 | `GET` | `/`, `/index.html` | Setup page |
 | `GET` | `/api/v1/device`, `/api/v1/capabilities`, `/api/v1/system` | Device and setup information, without secrets |
 | `GET` | `/api/v1/system/wifi-scan` | Wi-Fi scan<!-- only tc002 -->. It answers `503 scanUnavailable` while the setup hotspot is open<!-- /only --> |
-| `PUT` | `/api/v1/system` | Only the string fields `wifiSsid`, `wifiPass` and `hostname` |
+| `GET` | `/api/v1/mqtt/tls` | How the MQTT client trusts its broker<!-- only esp32 esp32-s3 -->. This clock has no MQTT over TLS, so the route answers `404`<!-- /only --> |
+| `PUT` | `/api/v1/system` | Only `wifiSsid`, `wifiPass`, `hostname`, `mqttHost`, `mqttUser`, `mqttPass`, `mqttPrefix` and `mqttTlsPin` as strings, `mqttEnabled`, `haDiscovery` and `mqttTls` as booleans, and `mqttPort` as a whole number |
+| `PUT`, `DELETE` | `/api/v1/mqtt/tls/ca` | Broker CA<!-- only esp32 esp32-s3 -->. The route answers `404` on this clock<!-- /only --> |
 | `POST` | `/api/v1/device/reboot` | Restart |
 | `POST` | `/api/v1/restore` | [Backup restore](http.md#post-apiv1restore), Wi-Fi included |
 
 Logs, scripts, file lists, secrets export and all other API routes are refused.
-A system update with other fields, duplicate fields or malformed JSON is refused as well.
+A system update with other fields, duplicate fields, a value of the wrong type or malformed JSON
+is refused as well.
 The response is:
 
 ```http
 HTTP/1.1 403 Forbidden
 Content-Type: application/json
 
-{"error":{"code":"forbidden","message":"Wi-Fi setup only"}}
+{"error":{"code":"forbidden","message":"setup only"}}
 ```
 
 The same refusal applies to file and firmware uploads. Any request with a `secrets` query parameter

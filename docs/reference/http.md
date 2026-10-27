@@ -78,7 +78,7 @@ credentials are checked before any file is stored. The answer, including a `401`
 the whole upload was sent. When a restore changes the username or password, the next request must
 use the restored credentials.
 
-In setup mode AWTRIX permits only the setup page, device/setup status reads, Wi-Fi setup,
+In setup mode AWTRIX permits only the setup page, device/setup status reads, Wi-Fi and MQTT setup,
 [reboot](#post-apiv1devicereboot) and [backup restore](#post-apiv1restore). Logs, scripts, file
 routes, secrets export and firmware upload answer `403 forbidden`. See the exact [setup allow-list](errors.md#provisioning-lockdown-403).
 
@@ -2725,8 +2725,11 @@ curl "http://<awtrix-ip>/api/v1/system?secrets=1"
 
 ### PUT /api/v1/system
 
-In setup mode only `wifiSsid`, `wifiPass` and `hostname` may be written, as strings.
-Other fields, duplicate keys and malformed setup bodies answer `403 forbidden`.
+In setup mode only the Wi-Fi fields `wifiSsid`, `wifiPass` and `hostname` and the MQTT connection
+fields `mqttEnabled`, `mqttHost`, `mqttPort`, `mqttUser`, `mqttPass`, `mqttPrefix`, `haDiscovery`,
+`mqttTls` and `mqttTlsPin` may be written. Other fields, duplicate keys, values of the wrong type and
+malformed setup bodies answer `403 forbidden`. The exact list is in the
+[setup allow-list](errors.md#provisioning-lockdown-403).
 
 Changes one or more configuration fields.
 

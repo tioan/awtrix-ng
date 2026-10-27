@@ -238,6 +238,10 @@ pretends to be your broker. Compare again before you press **Trust**.
 
 The trusted fingerprint is saved as `mqttTlsPin` and is part of a backup.
 
+On a new clock you can trust the broker before its first connection: on the
+[setup page](../getting-started/first-boot.md#step-2-enter-your-wi-fi), enter the fingerprint in
+**Broker fingerprint**, exactly as openssl prints it.
+
 ### Use your own certificate authority
 
 Only needed if you run your own certificate authority.

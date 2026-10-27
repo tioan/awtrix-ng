@@ -59,8 +59,8 @@ The network has the clock's name. A new clock uses a name made from its hardware
 named `kitchen-clock` opens a network called `kitchen-clock`.
 
 !!! warning "Anyone nearby can join the hotspot"
-    While the hotspot is open, anyone in range can join it and change the Wi-Fi settings. Set up
-    the clock somewhere you trust, and finish the setup soon.
+    While the hotspot is open, anyone in range can join it and change the Wi-Fi and MQTT
+    settings. Set up the clock somewhere you trust, and finish the setup soon.
 
 After you join, the setup page usually **opens by itself**, like the login page of hotel Wi-Fi.
 If nothing opens, type **`192.168.4.1`** into your browser.
@@ -79,7 +79,13 @@ banner that asks you to connect to Wi-Fi.
 2. Enter your Wi-Fi password.
 3. Optional: enter a **hostname**, a name like `kitchen-clock`. You can then open the clock at
    `http://kitchen-clock.local` instead of a number that may change.
-4. Press **Save**.
+4. Optional: turn on **Enable MQTT** and enter your broker. The clock then connects to it, and
+   shows up in Home Assistant, as soon as it is on your network. See [MQTT](../guides/mqtt.md).
+<!-- only tc002 -->
+   If your broker has a certificate of its own, turn on **TLS** and either enter its
+   **Broker fingerprint** or upload its **Broker CA**. See [Connect over TLS](../guides/mqtt.md#connect-over-tls-tc002).
+<!-- /only -->
+5. Press **Save**.
 
 If your network only admits known devices, add the **MAC address** at the top of the Wi-Fi
 section to your router's list first.
@@ -91,7 +97,8 @@ section to your router's list first.
     ```bash
     curl -X PUT http://<awtrix-ip>/api/v1/system \
       -H "Content-Type: application/json" \
-      -d '{"wifiSsid":"MyNetwork","wifiPass":"secret123","hostname":"kitchen-clock"}'
+      -d '{"wifiSsid":"MyNetwork","wifiPass":"secret123","hostname":"kitchen-clock",
+           "mqttEnabled":true,"mqttHost":"192.168.1.10","mqttUser":"awtrix","mqttPass":"secret456"}'
 
     curl -X POST http://<awtrix-ip>/api/v1/device/reboot
     ```
@@ -119,8 +126,9 @@ While someone is connected to the hotspot, the retries pause.
 
 ## What works in setup mode
 
-The setup hotspot is only for Wi-Fi setup. You can save your Wi-Fi name, Wi-Fi password and
-clock name, restore a backup, read setup information and restart the clock.
+The setup hotspot is only for setting up the connection. You can save your Wi-Fi name, Wi-Fi
+password, clock name and MQTT broker<!-- only tc002 --> with its broker CA<!-- /only -->, restore a backup, read setup
+information and restart the clock.
 Logs, scripts, file lists, other uploads, resetting and sleep are refused until the clock
 is on your network. The complete list is in [Setup mode lockdown](../reference/errors.md#provisioning-lockdown-403). These also need your network:
 

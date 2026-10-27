@@ -2889,7 +2889,7 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
     Forbidden:
-      description: Request is unavailable in setup mode (`Wi-Fi setup only`)
+      description: Request is unavailable in setup mode (`setup only`)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
